@@ -1,6 +1,6 @@
 package patmat
 
-import patmat.Huffman.{decode, encode}
+import patmat.Huffman.{convert, decode, encode}
 
 /**
  * A huffman code is represented by a binary tree.
@@ -266,13 +266,12 @@ trait Huffman extends HuffmanInterface:
    * sub-trees, think of how to build the code table for the entire tree.
    */
   def convert(tree: CodeTree): CodeTable =
-    def iter(t: CodeTree, acc : CodeTable, b: List[Bit]): CodeTable = t match
-      case Leaf(char, weight) => acc:::List((char,b))
+    def iter(t: CodeTree, b: List[Bit]): CodeTable = t match
+      case Leaf(char, weight) => List((char,b))
       case Fork(left, right, chars, weight) =>
-        iter(left, acc, b:::List(0))
-        iter(right, acc, b:::List(1))
+        iter(left, b:::List(0)) ::: iter(right, b:::List(1))
 
-    iter(tree,List(),List())
+    iter(tree,List())
 
 
   /**
@@ -305,8 +304,6 @@ object Huffman extends Huffman
 /*
 object Main extends App:
   val t1 = Fork(Leaf('a', 2), Leaf('b', 3), List('a', 'b'), 5)
-  val enc = encode(t1)("ab".toList)
-  println(enc)
-  val dc = decode(t1,enc)
-  println(dc)
+  println(convert(t1))
 */
+

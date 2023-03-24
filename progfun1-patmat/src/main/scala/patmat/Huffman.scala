@@ -76,8 +76,9 @@ trait Huffman extends HuffmanInterface:
       else
         val theChar = acc.head._1
         val theInt = acc.head._2
-        if theChar == c then List((theChar,theInt+1)):::acc.tail
-        else List((theChar,theInt)):::insert(c,acc.tail)
+        if theChar == c then (theChar,theInt+1)::acc.tail
+        else (theChar,theInt)::insert(c,acc.tail)
+
 
 
     def visit(chars: List[Char], acc: List[(Char, Int)]) : List[(Char, Int)] =
@@ -96,21 +97,24 @@ trait Huffman extends HuffmanInterface:
    * of a leaf is the frequency of the character.
    */
   def makeOrderedLeafList(freqs: List[(Char, Int)]): List[Leaf] =
-    def insert(acc: List[Leaf], lf: Leaf) : List[Leaf] =
-      if acc.isEmpty then List(lf)
-      else
-        if lf.weight <= acc.head.weight then List(lf):::acc
-        else List(acc.head):::insert(acc.tail,lf)
+    //convert all the list elements into leaf
+    val leaves = freqs.map((c,i)=>Leaf(c,i))
 
-    def visitFreq(freqs: List[(Char, Int)], acc : List[Leaf]): List[Leaf] =
-      if freqs.isEmpty then acc
-      else
-        val theChar = freqs.head._1
-        val theInt = freqs.head._2
-        val newLeaf: Leaf = Leaf(theChar, theInt)
-        visitFreq(freqs.tail, insert(acc, newLeaf))
+    //sort based on weight
+    def insort(leafList : List[Leaf]) : List[Leaf] = leafList match
+      case Nil => List()
+      case x :: Nil => List(x)
+      case x :: xs => insert(x, insort(xs))
 
-    visitFreq(freqs, List())
+    def insert(lf: Leaf, lList: List[Leaf]) : List[Leaf] = lList match
+      case Nil => List(lf)
+      case x :: xs =>
+        if lf.weight <= x.weight then lf :: lList
+        else x :: insert(lf, xs)
+
+    //call the sort function
+    insort(leaves)
+
 
 
   /**
@@ -131,22 +135,16 @@ trait Huffman extends HuffmanInterface:
    * If `trees` is a list of less than two elements, that list should be returned
    * unchanged.
    */
-  def combine(trees: List[CodeTree]): List[CodeTree] =
-    def insert(t: List[CodeTree], node: CodeTree) : List[CodeTree] =
-      if t.isEmpty then List(node)
-      else if weight(node) <= weight(t.head) then List(node):::t
-      else List(t.head) ::: insert(t.tail, node)
+  def combine(trees: List[CodeTree]): List[CodeTree] = trees match
+    case node1 :: node2 :: Nil => trees
+    case node1 :: node2 :: others => combine(insert(others,makeCodeTree(node1,node2)))
+    case _ => trees
 
-    def combineTwo(trees: List[CodeTree]) : List[CodeTree] =
-      //=2 is correct when we hab only two leafs in the tree. no need to encapsulate them in a fork
-      if trees.size <= 2 then trees
-      else
-        val node1 = trees.head
-        val node2 = trees.tail.head
-        val combined = makeCodeTree(node1, node2)
-        combine(insert(trees.tail.tail,combined))
-
-    combineTwo(trees)
+    def insert(tree: List[CodeTree], node: CodeTree) : List[CodeTree] = tree match
+      case Nil => List(node)
+      case x :: others =>
+        if weight(node) <= weight(x) then node :: tree
+        else x :: insert(others, node)
 
   /**
    * This function will be called in the following way:
@@ -193,7 +191,6 @@ trait Huffman extends HuffmanInterface:
           case Leaf(c,w) => acc::: List(c)
           case Fork(left, right, chars, weight) => acc
       else
-        println(bits.head)
         t match
           case Leaf(c,w) =>
             iter(tree,bits,acc:::List(c))
@@ -240,14 +237,10 @@ trait Huffman extends HuffmanInterface:
         else List()
     iter(tree, List())
 
-  def encode(tree: CodeTree)(text: List[Char]): List[Bit] =
+  def encode(tree: CodeTree)(text: List[Char]): List[Bit] = text  match
+      case Nil => List()
+      case x :: xs => getCode(tree, x) ::: encode(tree)(xs)
 
-    def encodeIter(txt: List[Char], acc: List[Bit]) : List[Bit] =
-      if txt.isEmpty then
-        println(acc)
-        acc
-      else encodeIter(txt.tail,acc:::getCode(tree, txt.head))
-    encodeIter(text, List())
 
   // Part 4b: Encoding using code table
 

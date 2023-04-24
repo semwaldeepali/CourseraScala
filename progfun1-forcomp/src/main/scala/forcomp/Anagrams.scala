@@ -1,7 +1,8 @@
 package forcomp
 
-import forcomp.Anagrams.wordOccurrences
+import forcomp.Anagrams.{sentenceAnagrams, wordOccurrences}
 
+import java.util
 import scala.io.{Codec, Source}
 
 object Anagrams extends AnagramsInterface:
@@ -160,11 +161,17 @@ object Anagrams extends AnagramsInterface:
    *  and has no zero-entries.
    */
   def subtract(x: Occurrences, y: Occurrences): Occurrences =
-    (for
-      x1 <- x
-      y1 <- y
-    yield
-      if(x1._1 == y1._1) (x1._1, x1._2 - y1._2) else x1).filter((ch,num) => num > 0)
+    //take map of x as first parameter in foldleft
+    val xMap = Map[Char, Int]() ++ x
+    //for each element of y check if in map and update mao accordingly.
+    //convert to list
+    // sort and return
+    y.foldLeft(xMap){ case (xmap, (ch,num)) =>
+      if xmap(ch) - num == 0
+      then xmap.removed(ch)
+      else xmap.updated(ch, xmap(ch) - num)
+    }.toList.sortWith((x1, y1) => x1._1.compareTo(y1._1) < 0)  // sort the occurrence list using sortWith function
+
 
 
 
@@ -211,10 +218,25 @@ object Anagrams extends AnagramsInterface:
    *
    *  Note: There is only one anagram of an empty sentence.
    */
-  def sentenceAnagrams(sentence: Sentence): List[Sentence] = ???
+  def sentenceAnagrams(sentence: Sentence): List[Sentence] =
 
+    def helperAnagram(occurrence: Occurrences): List[Sentence] =
+      //println(occurrence)
+      if(occurrence.isEmpty)
+        List[Sentence](List())
+      else
+          //get the combinations
+          //for each combination get the anagrams and recur for remaining characters
+          //combinations(occurrence).flatMap(candidate => dictionaryByOccurrences(candidate).flatMap( word1 => helperAnagram(subtract(occurrence,candidate)).map( sen => word1 :: sen)))
+          for
+            subset <- combinations(occurrence)
+            anagram <- dictionaryByOccurrences getOrElse (subset, Nil)
+            sentence <- helperAnagram(subtract(occurrence, subset))
+            if !subset.nonEmpty
+          yield
+            sentence.::(anagram)
 
-
+    helperAnagram(sentenceOccurrences(sentence))
 
 
 
@@ -234,3 +256,9 @@ object Dictionary:
         throw e
     finally
       wordstream.close()
+
+
+object Main extends App:
+  val sent = List("Linux", "rulez")
+  println("Anagram Sentence List: ")
+  println(sentenceAnagrams(sent))
